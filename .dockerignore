@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build output
+build/
+bin/
+out/
+target/
+*.jar
+*.war
+*.ear
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle (exclude cache but keep wrapper)
+.gradle/
+# Keep wrapper for Docker builds:
+# gradle/
+# gradlew
+# gradlew.bat
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+nohup.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test results
+.test-results/
+
+# Documentation (optional - include if you want docs in image)
+# README.md
+# LICENSE
+# *.md
+
+# Environment files (keep secrets out of image)
+.env
+.env.local
+.env.*.local
+
+# Node modules (if using frontend build tools)
+node_modules/
+
+# Cookies and session artifacts
+cookies.txt
+cookie.txt

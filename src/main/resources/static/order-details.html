@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details - Order Processing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .back-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+        
+        .order-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .order-icon {
+            font-size: 2.5em;
+        }
+        
+        .order-title h1 {
+            font-size: 2em;
+            color: #333;
+        }
+        
+        .order-title .order-id {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .status-badge {
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-PENDING { background: #fff3cd; color: #856404; }
+        .status-PROCESSING { background: #cfe2ff; color: #084298; }
+        .status-SHIPPED { background: #d1ecf1; color: #0c5460; }
+        .status-DELIVERED { background: #d4edda; color: #155724; }
+        .status-CANCELLED { background: #f8d7da; color: #721c24; }
+        
+        .order-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0 30px 0;
+        }
+        
+        .info-item {
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+        }
+        
+        .info-item label {
+            display: block;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .info-item .value {
+            color: #333;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .items-section {
+            margin-top: 40px;
+        }
+        
+        .items-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .items-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .items-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .items-table td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+        }
+        
+        .items-table tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+        
+        .items-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+        
+        .total-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 3px solid #f0f0f0;
+            text-align: right;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .total-label {
+            font-size: 16px;
+            color: #666;
+            margin-right: 20px;
+        }
+        
+        .total-value {
+            font-size: 16px;
+            color: #333;
+            min-width: 120px;
+            text-align: right;
+        }
+        
+        .grand-total {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #667eea;
+        }
+        
+        .grand-total .total-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .grand-total .total-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2 style="color: #333; margin: 0;">Order Details</h2>
+            <a href="/orders.html" class="back-btn">← Back to Orders</a>
+        </div>
+        
+        <div class="content" id="orderContent">
+            <div class="loading">Loading order details...</div>
+        </div>
+    </div>
+    
+    <script>
+        // Get order ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+        
+        if (!orderId) {
+            window.location.href = '/orders.html';
+        }
+        
+        // Fetch order details
+        async function fetchOrderDetails() {
+            try {
+                const url = `/api/orders/${orderId}?userId=${encodeURIComponent(localStorage.getItem('user_id') || '')}`;
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.clear();
+                    window.location.href = '/login.html?error=session_expired';
+                    return;
+                }
+                if (!response.ok) throw new Error('Failed to fetch order details');
+                const order = await response.json();
+                displayOrderDetails(order);
+            } catch (error) {
+                document.getElementById('orderContent').innerHTML = `<div class="error">Failed to load order details. Please try again.</div>`;
+            }
+        }
+        
+        function displayOrderDetails(order) {
+            const content = document.getElementById('orderContent');
+            
+            // Calculate subtotal (sum of all items)
+            const subtotal = order.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            
+            const itemsHTML = order.items.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.productName}</td>
+                    <td>${item.quantity}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>$${(item.quantity * item.price).toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            content.innerHTML = `
+                <div class="order-header">
+                    <div class="order-title">
+                        <h1>Order #${order.id}</h1>
+                        <span class="status-badge status-${order.status}">${order.status}</span>
+                    </div>
+                    
+                    <div class="order-info">
+                        <div class="info-item">
+                            <label>Order Date</label>
+                            <div class="value">${new Date(order.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Items</label>
+                            <div class="value">${order.items.length} item(s)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="items-section">
+                    <h2>Order Items</h2>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+                    
+                    <div class="total-section">
+                        <div class="total-row">
+                            <div class="total-label">Subtotal:</div>
+                            <div class="total-value">$${subtotal.toFixed(2)}</div>
+                        </div>
+                        <div class="total-row grand-total">
+                            <div class="total-label">Total Amount:</div>
+                            <div class="total-value">$${order.totalAmount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Load order details on page load
+        fetchOrderDetails();
+    </script>
+</body>
+</html>

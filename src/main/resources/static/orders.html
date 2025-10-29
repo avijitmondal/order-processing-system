@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Order Processing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            flex: 1;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .shop-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .shop-btn:hover {
+            background: #218838;
+        }
+        
+        .user-info h1 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .user-info p {
+            color: #666;
+        }
+        
+        .logout-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .logout-btn:hover {
+            background: #da190b;
+        }
+        
+        .orders-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .orders-header h2 {
+            color: #333;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .orders-list {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .order-card {
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .order-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .order-id {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-PENDING { background: #fff3cd; color: #856404; }
+        .status-PROCESSING { background: #cfe2ff; color: #084298; }
+        .status-SHIPPED { background: #d1ecf1; color: #0c5460; }
+        .status-DELIVERED { background: #d4edda; color: #155724; }
+        .status-CANCELLED { background: #f8d7da; color: #721c24; }
+        
+        .order-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .order-detail strong {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <div class="user-info">
+                    <h1 id="userName">Welcome</h1>
+                    <p id="userEmail"></p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="/shop.html" class="shop-btn">🛍️ Shop</a>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <div class="orders-container">
+            <div class="orders-header">
+                <h2>My Orders</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterOrders('')">All</button>
+                    <button class="filter-btn" onclick="filterOrders('PENDING')">Pending</button>
+                    <button class="filter-btn" onclick="filterOrders('PROCESSING')">Processing</button>
+                    <button class="filter-btn" onclick="filterOrders('SHIPPED')">Shipped</button>
+                    <button class="filter-btn" onclick="filterOrders('DELIVERED')">Delivered</button>
+                    <button class="filter-btn" onclick="filterOrders('CANCELLED')">Cancelled</button>
+                </div>
+            </div>
+            
+            <div id="ordersContent">
+                <div class="loading">Loading orders...</div>
+            </div>
+            <div id="ordersPagination" style="display:none; margin-top:25px; text-align:center;">
+                <button id="prevOrdersPage" class="filter-btn" disabled>← Prev</button>
+                <button id="nextOrdersPage" class="filter-btn" disabled>Next →</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    let allOrders = [];
+    let currentFilter = '';
+    let ordersPage = 0;
+    const ordersPageSize = 10;
+    let ordersLast = false;
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+        
+        // Display user info
+        document.getElementById('userName').textContent = localStorage.getItem('user_name') || 'Welcome';
+        document.getElementById('userEmail').textContent = localStorage.getItem('user_email') || '';
+        
+        // Fetch orders
+        async function fetchOrders() {
+            try {
+                const params = new URLSearchParams();
+                params.set('page', ordersPage);
+                params.set('size', ordersPageSize);
+                params.set('sort', 'createdAt');
+                params.set('direction', 'desc');
+                if (currentFilter) params.set('status', currentFilter);
+                const url = `/api/orders?${params.toString()}`;
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.clear();
+                    window.location.href = '/login.html?error=session_expired';
+                    return;
+                }
+                if (!response.ok) throw new Error('Failed to fetch orders');
+                const pageData = await response.json();
+                allOrders = pageData.content || [];
+                ordersPage = pageData.page;
+                ordersLast = pageData.last;
+                updateOrdersPagination(pageData.first, pageData.last);
+                displayOrders(allOrders);
+            } catch (error) {
+                document.getElementById('ordersContent').innerHTML = `<div class="error">Failed to load orders. Please try again.</div>`;
+                document.getElementById('ordersPagination').style.display = 'none';
+            }
+        }
+
+        function updateOrdersPagination(isFirst, isLast) {
+            const container = document.getElementById('ordersPagination');
+            container.style.display = 'block';
+            const prevBtn = document.getElementById('prevOrdersPage');
+            const nextBtn = document.getElementById('nextOrdersPage');
+            prevBtn.disabled = isFirst;
+            nextBtn.disabled = isLast;
+            prevBtn.onclick = () => { if (!isFirst) { ordersPage -= 1; fetchOrders(); } };
+            nextBtn.onclick = () => { if (!isLast) { ordersPage += 1; fetchOrders(); } };
+        }
+        
+        function displayOrders(orders) {
+            const content = document.getElementById('ordersContent');
+            
+            if (orders.length === 0) {
+                content.innerHTML = '<div class="no-orders">No orders found.</div>';
+                return;
+            }
+            
+            const ordersHTML = orders.map(order => `
+                <div class="order-card" onclick="window.location.href='/order-details.html?id=${order.id}'">
+                    <div class="order-header">
+                        <div class="order-id">Order #${order.id}</div>
+                        <span class="status-badge status-${order.status}">${order.status}</span>
+                    </div>
+                    <div class="order-details">
+                        <div class="order-detail">
+                            <strong>Total Amount</strong>
+                            $${order.totalAmount.toFixed(2)}
+                        </div>
+                        <div class="order-detail">
+                            <strong>Items</strong>
+                            ${order.items.length} item(s)
+                        </div>
+                        <div class="order-detail">
+                            <strong>Created</strong>
+                            ${new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            content.innerHTML = `<div class="orders-list">${ordersHTML}</div>`;
+        }
+        
+        function filterOrders(status) {
+            currentFilter = status;
+            ordersPage = 0; // reset page
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            fetchOrders();
+        }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html?logout=true';
+        }
+        
+        // Load orders on page load
+        fetchOrders();
+    </script>
+</body>
+</html>

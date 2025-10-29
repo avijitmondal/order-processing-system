@@ -1,0 +1,294 @@
+{
+  "info": {
+    "name": "Order Processing System API",
+    "description": "Curated collection: auth, users, products, orders lifecycle, pagination, ownership and errors",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "jwt_token", "value": "" },
+    { "key": "user_id_john", "value": "" },
+    { "key": "user_id_jane", "value": "" },
+    { "key": "alice_token", "value": "" },
+    { "key": "created_order_id", "value": "" },
+    { "key": "cancel_order_id", "value": "" },
+    { "key": "product_id_macbook", "value": "650e8400-e29b-41d4-a716-446655440001" },
+    { "key": "invalid_uuid", "value": "not-a-uuid" },
+    { "key": "unique_email", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login John",
+          "event": [{
+            "listen": "test",
+            "script": {"exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const r=pm.response.json(); ['token','userId','name','email'].forEach(k=>pm.expect(r).to.have.property(k));",
+              "pm.collectionVariables.set('jwt_token', r.token); pm.collectionVariables.set('user_id_john', r.userId); console.log('Logged in John');"
+            ],"type": "text/javascript"}
+          }],
+          "request": {"method": "POST","header": [{"key": "Content-Type","value": "application/json"}],"body": {"mode": "raw","raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}"},"url": {"raw": "{{base_url}}/api/auth/login","host":["{{base_url}}"],"path":["api","auth","login"]}}
+        },
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const timestamp = Date.now();",
+                  "pm.collectionVariables.set('unique_email', `alice.${timestamp}@example.com`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen":"test",
+              "script":{
+                "exec":[
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const r=pm.response.json();",
+                  "pm.collectionVariables.set('user_id_jane', r.userId);",
+                  "pm.collectionVariables.set('alice_token', r.token);",
+                  "pm.test('New user email matches',()=>pm.expect(r.email).to.eql(pm.collectionVariables.get('unique_email')));",
+                  "pm.test('Response has token',()=>pm.expect(r.token).to.be.a('string').and.not.empty);",
+                  "console.log('Alice registered with ID:', r.userId);"
+                ],
+                "type":"text/javascript"
+              }
+            }
+          ],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Alice Wonder\",\n  \"email\": \"{{unique_email}}\",\n  \"password\": \"password123\"\n}"},"url":{"raw":"{{base_url}}/api/auth/register","host":["{{base_url}}"],"path":["api","auth","register"]}}
+        },
+        {
+          "name": "Login Invalid Credentials",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"wrong\"\n}"},"url":{"raw":"{{base_url}}/api/auth/login","host":["{{base_url}}"],"path":["api","auth","login"]}}
+        },
+        {
+          "name": "Get Current User (/me)",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const u=pm.response.json();",
+            "['id','name','email','createdAt'].forEach(k=>pm.expect(u).to.have.property(k));",
+            "pm.test('Email matches John',()=>pm.expect(u.email).to.eql('john.doe@example.com'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/auth/me","host":["{{base_url}}"],"path":["api","auth","me"]}}
+        },
+        {
+          "name": "Register Duplicate Email",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+            "pm.test('Error message contains already registered',()=>pm.expect(pm.response.json().error).to.include('already registered'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"name\": \"Duplicate User\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}"},"url":{"raw":"{{base_url}}/api/auth/register","host":["{{base_url}}"],"path":["api","auth","register"]}}
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get John",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const u=pm.response.json(); pm.test('John name',()=>pm.expect(u.name).to.eql('John Doe')); pm.test('Email format',()=>pm.expect(u.email).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/users/{{user_id_john}}","host":["{{base_url}}"],"path":["api","users","{{user_id_john}}"]}}
+        },
+        {
+          "name": "Get Alice (Newly Registered)",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+            "const u=pm.response.json();",
+            "pm.test('Alice name',()=>pm.expect(u.name).to.eql('Alice Wonder'));",
+            "pm.test('Alice id matches',()=>pm.expect(u.id).to.eql(pm.collectionVariables.get('user_id_jane')));",
+            "pm.test('Email matches registered email',()=>pm.expect(u.email).to.eql(pm.collectionVariables.get('unique_email')));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{alice_token}}"}],"url":{"raw":"{{base_url}}/api/users/{{user_id_jane}}","host":["{{base_url}}"],"path":["api","users","{{user_id_jane}}"]}}
+        },
+        {
+          "name": "Get Jane Smith (Seed Data)",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const u=pm.response.json(); pm.test('Jane name',()=>pm.expect(u.name).to.eql('Jane Smith')); pm.test('Jane email',()=>pm.expect(u.email).to.eql('jane.smith@example.com'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/users/550e8400-e29b-41d4-a716-446655440001","host":["{{base_url}}"],"path":["api","users","550e8400-e29b-41d4-a716-446655440001"]}}
+        },
+        {
+          "name": "Get User Not Found",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('404 Not Found',()=>pm.response.to.have.status(404)); pm.test('Message contains User not found',()=>pm.expect(pm.response.json().message).to.include('User not found'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/users/99999999-9999-9999-9999-999999999999","host":["{{base_url}}"],"path":["api","users","99999999-9999-9999-9999-999999999999"]}}
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products Paged",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const b=pm.response.json(); ['content','page','size','totalElements','totalPages'].forEach(k=>pm.expect(b).to.have.property(k)); pm.test('content array',()=>pm.expect(b.content).to.be.an('array'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/products?page=0&size=5","host":["{{base_url}}"],"path":["api","products"],"query":[{"key":"page","value":"0"},{"key":"size","value":"5"}]}}
+        },
+        {
+          "name": "Get Product By ID",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const p=pm.response.json(); ['id','name','price','stock','category'].forEach(k=>pm.expect(p).to.have.property(k));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/products/{{product_id_macbook}}","host":["{{base_url}}"],"path":["api","products","{{product_id_macbook}}"]}}
+        },
+        {
+          "name": "Get Product Not Found",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('404 Not Found',()=>pm.response.to.have.status(404));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/products/99999999-9999-9999-9999-999999999999","host":["{{base_url}}"],"path":["api","products","99999999-9999-9999-9999-999999999999"]}}
+        },
+        {
+          "name": "Get Products By Category (Electronics)",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+            "const b=pm.response.json();",
+            "pm.test('PageResponse structure',()=>['content','page','size','totalElements'].forEach(k=>pm.expect(b).to.have.property(k)));",
+            "pm.test('All products are Electronics',()=>b.content.every(p=>p.category==='Electronics'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/products/category/Electronics?page=0&size=10","host":["{{base_url}}"],"path":["api","products","category","Electronics"],"query":[{"key":"page","value":"0"},{"key":"size","value":"10"}]}}
+        },
+        {
+          "name": "List Products With Category Filter",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+            "const b=pm.response.json();",
+            "pm.test('Products filtered by Accessories',()=>b.content.every(p=>p.category==='Accessories'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/products?category=Accessories&page=0&size=5","host":["{{base_url}}"],"path":["api","products"],"query":[{"key":"category","value":"Accessories"},{"key":"page","value":"0"},{"key":"size","value":"5"}]}}
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('201 Created',()=>pm.response.to.have.status(201)); const o=pm.response.json(); pm.collectionVariables.set('created_order_id', o.id); pm.test('PENDING status',()=>pm.expect(o.status).to.eql('PENDING'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": [\n    { \"productName\": \"MacBook Pro 14\\\"\", \"quantity\": 1, \"price\": 1999.00 },\n    { \"productName\": \"Wireless Mouse\", \"quantity\": 2, \"price\": 99.99 }\n  ]\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        },
+        {
+          "name": "Get Order By ID",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const o=pm.response.json(); pm.test('Order belongs to John',()=>pm.expect(o.userId).to.eql(pm.collectionVariables.get('user_id_john')));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders/{{created_order_id}}?userId={{user_id_john}}","host":["{{base_url}}"],"path":["api","orders","{{created_order_id}}"],"query":[{"key":"userId","value":"{{user_id_john}}"}]}}
+        },
+        {
+          "name": "Get Order Unauthorized",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('404 Not Found',()=>pm.response.to.have.status(404)); pm.test('Message contains for user',()=>pm.expect(pm.response.json().message).to.include('for user'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders/{{created_order_id}}?userId=550e8400-e29b-41d4-a716-446655440001","host":["{{base_url}}"],"path":["api","orders","{{created_order_id}}"],"query":[{"key":"userId","value":"550e8400-e29b-41d4-a716-446655440001"}]}}
+        },
+        {
+          "name": "List Orders Paged",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const b=pm.response.json(); pm.test('PageResponse content',()=>['content','page','size','totalElements'].forEach(k=>pm.expect(b).to.have.property(k)));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders?page=0&size=5","host":["{{base_url}}"],"path":["api","orders"],"query":[{"key":"page","value":"0"},{"key":"size","value":"5"}]}}
+        },
+        {
+          "name": "List Orders By Status PENDING",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); const b=pm.response.json(); b.content.forEach(o=>pm.expect(o.status).to.eql('PENDING'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders?status=PENDING","host":["{{base_url}}"],"path":["api","orders"],"query":[{"key":"status","value":"PENDING"}]}}
+        },
+        {
+          "name": "Update Order Status PROCESSING",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200)); pm.test('Status PROCESSING',()=>pm.expect(pm.response.json().status).to.eql('PROCESSING'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"status\": \"PROCESSING\"\n}"},"url":{"raw":"{{base_url}}/api/orders/{{created_order_id}}/status?userId={{user_id_john}}","host":["{{base_url}}"],"path":["api","orders","{{created_order_id}}","status"],"query":[{"key":"userId","value":"{{user_id_john}}"}]}}
+        },
+        {
+          "name": "Create Order For Cancel",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('201 Created',()=>pm.response.to.have.status(201)); const o=pm.response.json(); pm.collectionVariables.set('cancel_order_id', o.id); pm.test('PENDING',()=>pm.expect(o.status).to.eql('PENDING'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": [\n    { \"productName\": \"iPad Pro 11\\\"\", \"quantity\": 1, \"price\": 799.00 }\n  ]\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        },
+        {
+          "name": "Cancel Order Success",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('204 No Content',()=>pm.response.to.have.status(204)); pm.test('Empty body',()=>pm.expect(pm.response.text()).to.be.empty);"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders/{{cancel_order_id}}?userId={{user_id_john}}","host":["{{base_url}}"],"path":["api","orders","{{cancel_order_id}}"],"query":[{"key":"userId","value":"{{user_id_john}}"}]}}
+        },
+        {
+          "name": "Cancel Order Already Processed",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request',()=>pm.response.to.have.status(400)); pm.test('Message contains PENDING',()=>pm.expect(pm.response.json().message).to.include('PENDING'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders/{{created_order_id}}?userId={{user_id_john}}","host":["{{base_url}}"],"path":["api","orders","{{created_order_id}}"],"query":[{"key":"userId","value":"{{user_id_john}}"}]}}
+        },
+        {
+          "name": "List Orders With Sorting",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+            "const b=pm.response.json();",
+            "pm.test('Has sort info',()=>pm.expect(b).to.have.property('sort'));",
+            "pm.test('Direction is DESC',()=>pm.expect(b.direction).to.eql('DESC'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders?page=0&size=5&sort=createdAt&direction=desc","host":["{{base_url}}"],"path":["api","orders"],"query":[{"key":"page","value":"0"},{"key":"size","value":"5"},{"key":"sort","value":"createdAt"},{"key":"direction","value":"desc"}]}}
+        }
+      ]
+    },
+    {
+      "name": "Negative",
+      "item": [
+        {
+          "name": "Get Order Invalid UUID (400)",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request',()=>pm.response.to.have.status(400)); pm.test('Message mentions Invalid value',()=>pm.expect(pm.response.json().message).to.include('Invalid value'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"GET","header":[{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"url":{"raw":"{{base_url}}/api/orders/{{created_order_id}}?userId={{invalid_uuid}}","host":["{{base_url}}"],"path":["api","orders","{{created_order_id}}"],"query":[{"key":"userId","value":"{{invalid_uuid}}"}]}}
+        },
+        {
+          "name": "Create Order Insufficient Stock",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('409 Conflict',()=>pm.response.to.have.status(409)); pm.test('Message contains Insufficient stock',()=>pm.expect(pm.response.json().message).to.include('Insufficient stock'));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": [\n    { \"productName\": \"MacBook Pro 14\\\"\", \"quantity\": 999, \"price\": 1999.00 }\n  ]\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        },
+        {
+          "name": "Create Order Empty Items Array",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request',()=>pm.response.to.have.status(400));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": []\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        },
+        {
+          "name": "Create Order Negative Quantity",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request',()=>pm.response.to.have.status(400));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": [\n    { \"productName\": \"iPad Pro 11\\\"\", \"quantity\": -1, \"price\": 799.00 }\n  ]\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        },
+        {
+          "name": "Create Order Zero Price",
+          "event": [{"listen":"test","script":{"exec":[
+            "pm.test('400 Bad Request',()=>pm.response.to.have.status(400));"
+          ],"type":"text/javascript"}}],
+          "request": {"method":"POST","header":[{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}],"body":{"mode":"raw","raw":"{\n  \"items\": [\n    { \"productName\": \"iPad Pro 11\\\"\", \"quantity\": 1, \"price\": 0.00 }\n  ]\n}"},"url":{"raw":"{{base_url}}/api/orders","host":["{{base_url}}"],"path":["api","orders"]}}
+        }
+      ]
+    }
+  ]
+}
