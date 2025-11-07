@@ -18,6 +18,7 @@ A modern **Spring Boot 3.5** RESTful service for managing e-commerce orders with
 - [Order Lifecycle](#-order-lifecycle)
 - [Security](#-security)
 - [Testing](#-testing)
+- [Redis Integration](#-redis-integration)
 - [Docker Deployment](#-docker-deployment)
 - [Configuration](#-configuration)
 - [Sample Data](#-sample-data)
@@ -29,7 +30,10 @@ A modern **Spring Boot 3.5** RESTful service for managing e-commerce orders with
 
 ### Core Functionality
 - 🔐 **JWT Authentication** - Secure token-based auth (login, register, logout)
-- 👤 **User Management** - Profile retrieval and user operations
+- � **Redis Token Storage** - Persistent JWT token storage with automatic expiration
+- 🚫 **Token Invalidation** - Logout immediately invalidates tokens server-side
+- 🔄 **Session Management** - Track active user sessions, force logout capability
+- �👤 **User Management** - Profile retrieval and user operations
 - 🛍️ **Product Catalog** - Paginated listings with category filtering
 - 📦 **Order Management** - Create, retrieve, update status, cancel orders
 - 🔄 **Automated Workflows** - Scheduled order status progression (PENDING → PROCESSING)
@@ -55,12 +59,13 @@ A modern **Spring Boot 3.5** RESTful service for managing e-commerce orders with
 | **Language** | Java 21 |
 | **Framework** | Spring Boot 3.5.7 |
 | **Security** | Spring Security, JWT (JJWT 0.12.6), BCrypt |
+| **Caching/Session** | Redis 7 (Token Storage & Session Management) |
 | **Database** | H2 (in-memory), Spring Data JPA, Hibernate |
 | **Build Tool** | Gradle 8.5 |
 | **Documentation** | Springdoc OpenAPI 3.0 (Swagger UI) |
 | **Testing** | JUnit 5, Postman Collection (30 tests) |
 | **Logging** | SLF4J, Logback |
-| **Container** | Docker (multi-stage build) |
+| **Container** | Docker Compose (Redis + Application) |
 
 ---
 
@@ -69,19 +74,72 @@ A modern **Spring Boot 3.5** RESTful service for managing e-commerce orders with
 ### Prerequisites
 - **Java 21** or higher
 - **Gradle** (wrapper included)
-- **Docker** (optional, for containerized deployment)
+- **Docker & Docker Compose** (required for Redis)
 
-### Local Development
+### Option 1: Quick Start with Docker Compose (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/avijitmondal/order-processing-system.git
 cd order-processing-system
 
+# Start Redis and Application
+docker-compose up -d
+
+# Application starts at http://localhost:8080
+# Redis available at localhost:6379
+```
+
+### Option 2: Local Development with External Redis
+
+```bash
+# Start Redis using the management script
+./redis-manager.sh start
+
 # Run the application
 ./gradlew bootRun
 
 # Application starts at http://localhost:8080
+```
+
+### Option 3: Manual Redis Setup
+
+```bash
+# Start Redis container manually
+docker run -d \
+  --name redis \
+  -p 6379:6379 \
+  redis:7-alpine
+
+# Run the application
+./gradlew bootRun
+```
+
+### Redis Management Script
+
+The included `redis-manager.sh` provides convenient Redis operations:
+
+```bash
+# Start Redis container
+./redis-manager.sh start
+
+# Check Redis status
+./redis-manager.sh status
+
+# View Redis logs
+./redis-manager.sh logs
+
+# Open Redis CLI
+./redis-manager.sh cli
+
+# Monitor Redis commands in real-time
+./redis-manager.sh monitor
+
+# Flush all Redis data (with confirmation)
+./redis-manager.sh flush
+
+# Stop Redis container
+./redis-manager.sh stop
 ```
 
 ### Verify Installation
@@ -90,6 +148,10 @@ cd order-processing-system
 curl http://localhost:8080/actuator/health
 
 # Response: {"status":"UP"}
+
+# Check Redis connectivity
+docker exec -it redis redis-cli ping
+# Response: PONG
 ```
 
 ### Access Points
@@ -99,6 +161,7 @@ curl http://localhost:8080/actuator/health
   - JDBC URL: `jdbc:h2:mem:orderdb`
   - Username: `sa`
   - Password: *(leave empty)*
+- **Redis:** localhost:6379 (accessible via `redis-cli` or `./redis-manager.sh cli`)
 
 ---
 
@@ -135,11 +198,13 @@ Access the **interactive API documentation** at http://localhost:8080/swagger-ui
 #### 🔐 Authentication (Public)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/auth/login` | Login and receive JWT token |
-| `POST` | `/api/auth/register` | Register new user account |
-| `POST` | `/api/auth/logout` | Logout (clear session cookie) |
+| `POST` | `/api/auth/login` | Login and receive JWT token (stored in Redis) |
+| `POST` | `/api/auth/register` | Register new user account (generates token) |
+| `POST` | `/api/auth/logout` | Logout and invalidate token (removes from Redis) |
 | `GET` | `/api/auth/me` | Get current authenticated user |
 | `GET` | `/api/auth/hash/{password}` | Generate BCrypt hash (utility) |
+
+**🔴 Redis Integration:** Login/register store JWT tokens in Redis with automatic 24-hour expiration. Logout immediately invalidates tokens by removing them from Redis.
 
 #### 👥 Users (Protected)
 | Method | Endpoint | Description |
@@ -346,7 +411,8 @@ order-processing-system/
 │   │   ├── service/             # Business logic
 │   │   │   ├── UserService.java
 │   │   │   ├── ProductService.java
-│   │   │   └── OrderService.java
+│   │   │   ├── OrderService.java
+│   │   │   └── TokenService.java            # 🔴 Redis token management
 │   │   ├── repository/          # Data access (Spring Data JPA)
 │   │   │   ├── UserRepository.java
 │   │   │   ├── ProductRepository.java
@@ -368,11 +434,12 @@ order-processing-system/
 │   │   │   └── UserResponse.java
 │   │   ├── security/            # JWT & Security config
 │   │   │   ├── JwtUtil.java
-│   │   │   ├── JwtAuthenticationFilter.java
+│   │   │   ├── JwtAuthenticationFilter.java  # 🔴 Redis validation added
 │   │   │   ├── CustomUserDetailsService.java
 │   │   │   └── SecurityConfig.java
 │   │   ├── config/              # Application configuration
-│   │   │   └── OpenApiConfig.java
+│   │   │   ├── OpenApiConfig.java
+│   │   │   └── RedisConfig.java             # 🔴 Redis configuration
 │   │   ├── scheduler/           # Scheduled tasks
 │   │   │   └── OrderScheduler.java
 │   │   ├── exception/           # Exception handling
@@ -382,7 +449,7 @@ order-processing-system/
 │   │   │   └── OrderNotFoundException.java
 │   │   └── OrderProcessingSystemApplication.java
 │   └── resources/
-│       ├── application.yml      # Main configuration
+│       ├── application.yml      # Main configuration (🔴 Redis settings added)
 │       ├── data.sql            # Sample data initialization
 │       └── static/             # Static HTML pages
 │           ├── login.html
@@ -390,10 +457,17 @@ order-processing-system/
 │           ├── shop.html
 │           ├── orders.html
 │           └── order-details.html
-├── build.gradle                # Gradle build configuration
+├── build.gradle                # Gradle build (🔴 Redis dependency added)
 ├── Dockerfile                  # Docker multi-stage build
+├── docker-compose.yml          # 🔴 Redis + Application orchestration
+├── redis-manager.sh            # 🔴 Redis management CLI tool
+├── REDIS_INTEGRATION.md        # 🔴 Comprehensive Redis guide
+├── REDIS_IMPLEMENTATION_SUMMARY.md  # 🔴 Implementation overview
+├── REDIS_QUICK_REFERENCE.txt   # 🔴 Quick reference card
 ├── Order_Processing_System_API.postman_collection.json
 └── README.md
+
+🔴 = Redis-related files/changes
 ```
 
 ---
@@ -507,7 +581,7 @@ order-processing-system/
 ## 🔒 Security
 ### Authentication & Authorization
 
-**JWT Token-Based Authentication:**
+**JWT Token-Based Authentication with Redis Storage:**
 - **Public Endpoints:** `/api/auth/**` (login, register, logout, me, hash)
 - **Protected Endpoints:** All `/api/users/**`, `/api/products/**`, `/api/orders/**`
 - **Token Format:** `Authorization: Bearer <JWT>`
@@ -515,7 +589,30 @@ order-processing-system/
   - Subject: user email
   - Issued At (iat): timestamp
   - Expiration (exp): configurable (default 24h)
-- **Validation:** `JwtAuthenticationFilter` validates token on each request
+- **Validation:** Two-layer approach:
+  1. `TokenService` checks token existence in Redis
+  2. `JwtUtil` validates JWT signature and expiration
+  
+**🔴 Redis Token Storage:**
+- **Storage Pattern:** Dual-key design for efficient lookups
+  - `jwt:token:{token}` → user email (for token validation)
+  - `jwt:user:{email}` → token (for session management)
+- **Automatic Expiration:** TTL matches JWT expiration (24 hours default)
+- **Token Invalidation:** Logout immediately removes token from Redis
+- **Session Management:** Track active tokens, revoke all user tokens
+- **Graceful Degradation:** Falls back to JWT-only validation if Redis unavailable
+
+**Authentication Flow:**
+```
+Login/Register:
+  Generate JWT → Store in Redis → Return to client
+
+Request Authentication:
+  Extract JWT → Check Redis existence → Validate JWT signature → Authenticate
+
+Logout:
+  Extract JWT → Remove from Redis → Token immediately invalid
+```
 
 **Password Security:**
 - **Hashing:** BCrypt with salt (cost factor 10)
@@ -526,11 +623,6 @@ order-processing-system/
 - Order operations require `userId` query parameter
 - Service layer validates userId matches authenticated user
 - Prevents users from accessing/modifying others' orders
-
-**Session Tracking:**
-- `session_id` cookie issued on login/register
-- **⚠️ Development Only:** Non-HttpOnly, not secure
-- **Production:** Should use `HttpOnly`, `Secure`, `SameSite=Strict` flags
 
 ### Security Configuration
 
@@ -554,12 +646,24 @@ order-processing-system/
 | **JWT Secret** | Hardcoded in config | Use environment variables / secrets manager |
 | **Token Expiry** | 24 hours | Reduce to 1-4 hours + implement refresh tokens |
 | **Password Hashing** | BCrypt (cost 10) | Keep, consider increasing cost factor to 12-14 |
-| **Session Cookie** | Non-HttpOnly | Enable `HttpOnly`, `Secure`, `SameSite=Strict` |
+| **Redis Authentication** | None | Enable `requirepass` in production |
+| **Redis Connection** | Plaintext | Use TLS/SSL encryption |
+| **Redis Persistence** | In-memory only | Enable AOF/RDB for data durability |
+| **Redis High Availability** | Single instance | Use Redis Sentinel or Cluster |
 | **CORS** | Default (allows all) | Restrict to specific origins |
 | **Rate Limiting** | None | Implement at API gateway or filter level |
 | **TLS/HTTPS** | Not configured | Enforce HTTPS, redirect HTTP → HTTPS |
 | **Error Messages** | Detailed for debugging | Sanitize to avoid information leakage |
 | **Input Validation** | Bean Validation | Add max length constraints, sanitization |
+
+**🔴 Redis Security Best Practices:**
+- Enable authentication: `requirepass` in redis.conf
+- Use TLS for Redis connections in production
+- Configure Redis persistence (AOF + RDB snapshots)
+- Set up Redis Sentinel for automatic failover
+- Use Redis Cluster for horizontal scaling
+- Monitor Redis metrics (memory usage, eviction rate, connection count)
+- Consider managed Redis services (AWS ElastiCache, Azure Cache, GCP Memorystore)
 
 ---
 
@@ -614,12 +718,245 @@ curl -H "Authorization: Bearer $TOKEN" \
 - Open http://localhost:8080/swagger-ui.html
 - Interactive testing with built-in authentication
 
+**4. Testing Redis Token Storage:**
+```bash
+# Login and get token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"john.doe@example.com","password":"password123"}' \
+  | jq -r .token)
+
+# Verify token stored in Redis
+./redis-manager.sh cli
+> GET "jwt:user:john.doe@example.com"
+> KEYS jwt:*
+> TTL "jwt:user:john.doe@example.com"
+> EXIT
+
+# Logout and verify token removed
+curl -X POST http://localhost:8080/api/auth/logout \
+  -H "Authorization: Bearer $TOKEN"
+
+# Check Redis again (token should be gone)
+./redis-manager.sh cli
+> GET "jwt:user:john.doe@example.com"
+# (nil)
+```
+
+---
+
+## � Redis Integration
+
+### Overview
+JWT tokens are stored in Redis for server-side session management, enabling:
+- ✅ **Token Invalidation**: Logout immediately invalidates tokens
+- ✅ **Session Tracking**: View active user sessions
+- ✅ **Forced Logout**: Revoke all tokens for a user (e.g., password change)
+- ✅ **Security**: Block compromised tokens instantly
+- ✅ **Automatic Expiration**: Tokens auto-expire with JWT TTL (24h)
+
+### Redis Key Structure
+
+```
+jwt:token:{token}  → user@email.com    (TTL: 24h)
+jwt:user:{email}   → {token}           (TTL: 24h)
+```
+
+**Example:**
+```bash
+# After login
+jwt:token:eyJhbGci...  → "john.doe@example.com"
+jwt:user:john.doe@example.com → "eyJhbGci..."
+```
+
+### TokenService API
+
+The `TokenService` provides 6 core methods:
+
+```java
+// Store token after login/register
+tokenService.storeToken(email, token);
+
+// Validate token on each request
+boolean isValid = tokenService.validateToken(token);
+
+// Get user email from token
+String email = tokenService.getUserEmail(token);
+
+// Invalidate single token (logout)
+tokenService.invalidateToken(token);
+
+// Invalidate all user tokens (forced logout)
+tokenService.invalidateUserTokens(email);
+
+// Check if user has active session
+boolean hasSession = tokenService.hasActiveToken(email);
+```
+
+### Redis CLI Commands
+
+```bash
+# Open Redis CLI
+./redis-manager.sh cli
+
+# List all JWT tokens
+KEYS jwt:*
+
+# Get token for user
+GET "jwt:user:john.doe@example.com"
+
+# Check token TTL (seconds remaining)
+TTL "jwt:user:john.doe@example.com"
+
+# Delete specific token
+DEL "jwt:token:eyJhbGci..."
+
+# Delete all tokens for user
+DEL "jwt:user:john.doe@example.com"
+
+# Monitor Redis commands in real-time
+./redis-manager.sh monitor
+
+# Flush all data (development only)
+./redis-manager.sh flush
+```
+
+### Production Redis Setup
+
+**Managed Services (Recommended):**
+- **AWS ElastiCache** - Redis as a service
+- **Azure Cache for Redis** - Fully managed
+- **Google Cloud Memorystore** - Enterprise-ready
+
+**Self-Hosted High Availability:**
+```bash
+# Redis Sentinel for automatic failover
+redis-sentinel /path/to/sentinel.conf
+
+# Redis Cluster for horizontal scaling
+redis-cli --cluster create \
+  127.0.0.1:7000 127.0.0.1:7001 \
+  127.0.0.1:7002 127.0.0.1:7003 \
+  --cluster-replicas 1
+```
+
+**Configuration:**
+```yaml
+spring:
+  data:
+    redis:
+      # Single instance
+      host: redis.example.com
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: true
+      
+      # Sentinel configuration
+      sentinel:
+        master: mymaster
+        nodes:
+          - redis-sentinel-1:26379
+          - redis-sentinel-2:26379
+          - redis-sentinel-3:26379
+      
+      # Cluster configuration
+      cluster:
+        nodes:
+          - redis-node-1:6379
+          - redis-node-2:6379
+          - redis-node-3:6379
+```
+
+### Monitoring Redis
+
+```bash
+# Check Redis stats
+./redis-manager.sh cli
+> INFO stats
+> INFO memory
+> INFO clients
+
+# Monitor commands in real-time
+./redis-manager.sh monitor
+
+# Check slow queries
+> SLOWLOG GET 10
+
+# Memory usage by key pattern
+> MEMORY USAGE "jwt:user:john.doe@example.com"
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Connection refused | Ensure Redis is running: `./redis-manager.sh status` |
+| Token not found after login | Check Redis logs: `./redis-manager.sh logs` |
+| Token persists after logout | Verify TokenService invalidation logic |
+| High memory usage | Check token count: `redis-cli DBSIZE` |
+| Slow performance | Enable Redis persistence (AOF/RDB) |
+
+**For comprehensive Redis documentation, see:**
+- `REDIS_INTEGRATION.md` - Full integration guide
+- `REDIS_IMPLEMENTATION_SUMMARY.md` - Implementation overview
+- `REDIS_QUICK_REFERENCE.txt` - Command cheat sheet
+
 ---
 
 ## 🐳 Docker Deployment
-The project includes a **multi-stage Dockerfile** that builds the application and creates an optimized runtime image.
 
-### Build Docker Image
+### Docker Compose (Recommended)
+
+The project includes `docker-compose.yml` for orchestrating Redis and the application:
+
+```bash
+# Start all services (Redis + Application)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Check status
+docker-compose ps
+
+# Stop all services
+docker-compose down
+
+# Remove volumes (clears Redis data)
+docker-compose down -v
+```
+
+**Docker Compose Configuration:**
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+```
+
+### Standalone Docker Build
+
+#### Build Docker Image
 ```bash
 # Build with latest tag
 docker build -t order-processing-system:latest .
@@ -639,19 +976,24 @@ docker build --no-cache -t order-processing-system:latest .
 
 ### Run Container
 ```bash
-# Basic run
+# Basic run (requires external Redis)
 docker run -d \
   --name order-app \
   -p 8080:8080 \
+  -e SPRING_DATA_REDIS_HOST=host.docker.internal \
   order-processing-system:latest
 
+# With environment variables
 # With environment variables
 docker run -d \
   --name order-app \
   -p 8080:8080 \
+  -e SPRING_DATA_REDIS_HOST=redis \
+  -e SPRING_DATA_REDIS_PORT=6379 \
   -e JWT_SECRET=your-secret-here \
   -e JWT_EXPIRATION=3600000 \
   -e JAVA_OPTS="-Xmx1g -Xms512m" \
+  --link redis:redis \
   order-processing-system:latest
 
 # With resource limits
@@ -661,6 +1003,56 @@ docker run -d \
   --memory="1g" \
   --cpus="1.0" \
   order-processing-system:latest
+```
+
+**Access:** http://localhost:8080
+
+### Container Management
+```bash
+# View logs
+docker logs -f order-app
+
+# Check status
+docker ps | grep order-app
+
+# Health check
+curl http://localhost:8080/actuator/health
+
+# Stop and remove
+docker stop order-app redis
+docker rm order-app redis
+
+# Shell access (debugging)
+docker exec -it order-app /bin/sh
+docker exec -it redis redis-cli
+```
+
+### Redis Container Management
+
+```bash
+# Using redis-manager.sh (recommended)
+./redis-manager.sh start
+./redis-manager.sh status
+./redis-manager.sh logs
+./redis-manager.sh cli
+./redis-manager.sh stop
+
+# Manual Docker commands
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+docker exec -it redis redis-cli
+docker logs -f redis
+docker stop redis
+```
+
+### Production Considerations
+- **Secrets:** Use Docker Secrets or external vaults (never hardcode)
+- **Networking:** Deploy behind reverse proxy (Nginx/Traefik) for TLS
+- **Redis Persistence:** Mount volume for data durability (`-v redis-data:/data`)
+- **Redis High Availability:** Use Redis Sentinel or managed service
+- **Monitoring:** Integrate Prometheus for metrics scraping
+- **Logging:** Use log aggregation (Fluentd, ELK stack)
+- **Orchestration:** Consider Kubernetes for high availability
+- **Resource Limits:** Set memory and CPU limits for both containers
 ```
 
 **Access:** http://localhost:8080
@@ -711,6 +1103,18 @@ spring:
     username: sa
     password:
   
+  # 🔴 Redis Configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 60000
+      jedis:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  
   h2:
     console:
       enabled: true
@@ -738,6 +1142,12 @@ logging:
 # JWT Configuration
 export JWT_SECRET="your-secret-hex-string"
 export JWT_EXPIRATION=3600000  # 1 hour
+
+# 🔴 Redis Configuration
+export SPRING_DATA_REDIS_HOST="localhost"
+export SPRING_DATA_REDIS_PORT=6379
+export SPRING_DATA_REDIS_PASSWORD=""  # Set in production
+export SPRING_DATA_REDIS_TIMEOUT=60000
 
 # Database (production)
 export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/orderdb"
@@ -799,26 +1209,35 @@ export JAVA_OPTS="-Xmx1g -Xms512m"
 ## 🚧 Limitations
 
 - H2 in-memory database (data lost on restart)
-- No refresh tokens (users must re-login)
+- Redis single instance in development (production needs HA setup)
+- No refresh tokens (users must re-login after 24h)
 - No rate limiting (vulnerable to brute force)
 - No admin role (all users equal access)
 - Manual SHIPPED/DELIVERED status updates
+- Redis graceful degradation may allow token reuse if Redis is down
 
 ---
 
 ## 🔮 Future Enhancements
 
 **Short Term:**
-- Refresh tokens & rate limiting
+- ✅ ~~Redis token storage~~ (Completed)
+- ✅ ~~Token invalidation on logout~~ (Completed)
+- Refresh tokens with sliding expiration
+- Rate limiting with Redis
 - Role-based access control (USER, ADMIN)
 - Email notifications
 - Advanced order filtering
+- Redis Sentinel for high availability
 
 **Long Term:**
 - Microservices architecture
-- Event-driven design (Kafka)
+- Event-driven design (Kafka/RabbitMQ)
 - GraphQL API
 - Mobile apps
+- Redis Cluster for horizontal scaling
+- Distributed tracing (OpenTelemetry)
+- Real-time order tracking with WebSockets
 
 ---
 
