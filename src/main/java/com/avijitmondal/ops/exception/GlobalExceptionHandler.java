@@ -1,5 +1,7 @@
 package com.avijitmondal.ops.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,6 +18,7 @@ import java.util.Map;
 
 @RestControllerAdvice(annotations = RestController.class)
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleOrderNotFoundException(OrderNotFoundException ex) {
@@ -105,61 +108,15 @@ public class GlobalExceptionHandler {
                 "Invalid authentication credentials",
                 LocalDateTime.now()
         );
+        logger.info(ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 
     // Inner classes for error responses
-    public static class ErrorResponse {
-        private int status;
-        private String message;
-        private LocalDateTime timestamp;
-
-        public ErrorResponse(int status, String message, LocalDateTime timestamp) {
-            this.status = status;
-            this.message = message;
-            this.timestamp = timestamp;
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
-        }
+        public record ErrorResponse(int status, String message, LocalDateTime timestamp) {
     }
 
-    public static class ValidationErrorResponse {
-        private int status;
-        private String message;
-        private Map<String, String> errors;
-        private LocalDateTime timestamp;
-
-        public ValidationErrorResponse(int status, String message, Map<String, String> errors, LocalDateTime timestamp) {
-            this.status = status;
-            this.message = message;
-            this.errors = errors;
-            this.timestamp = timestamp;
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public Map<String, String> getErrors() {
-            return errors;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
-        }
+    public record ValidationErrorResponse(int status, String message, Map<String, String> errors,
+                                          LocalDateTime timestamp) {
     }
 }

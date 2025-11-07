@@ -1,5 +1,6 @@
 package com.avijitmondal.ops.security;
 
+import com.avijitmondal.ops.service.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+    
+    @Autowired
+    private TokenService tokenService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -52,6 +56,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
+                // Validate token exists in Redis
+                if (!tokenService.validateToken(jwt)) {
+                    logger.warn("JWT token not found in Redis or expired for user: " + username);
+                    writeUnauthorized(response, "Token has been invalidated or expired");
+                    return;
+                }
+                
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (Boolean.TRUE.equals(jwtUtil.validateToken(jwt, userDetails))) {

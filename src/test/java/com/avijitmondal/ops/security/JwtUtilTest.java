@@ -1,7 +1,6 @@
 package com.avijitmondal.ops.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.User;

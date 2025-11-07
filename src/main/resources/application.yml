@@ -13,7 +13,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        format_sql: false
+        format-sql: false
     defer-datasource-initialization: true
   sql:
     init:
@@ -23,6 +23,17 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      timeout: 60000
+      jedis:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
 server:
   port: 8080
@@ -30,3 +41,4 @@ server:
 jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
   expiration: 86400000
+

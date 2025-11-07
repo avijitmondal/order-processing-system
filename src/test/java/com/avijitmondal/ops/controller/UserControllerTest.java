@@ -1,9 +1,7 @@
 package com.avijitmondal.ops.controller;
 
-import com.avijitmondal.ops.dto.UserResponse;
 import com.avijitmondal.ops.model.User;
 import com.avijitmondal.ops.repository.UserRepository;
-import com.avijitmondal.ops.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +27,6 @@ class UserControllerTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private UserService userService;
 
     private User testUser;
 

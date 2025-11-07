@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -39,9 +38,9 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(404, body.getStatus());
-        assertEquals("Order not found", body.getMessage());
-        assertNotNull(body.getTimestamp());
+        assertEquals(404, body.status());
+        assertEquals("Order not found", body.message());
+        assertNotNull(body.timestamp());
     }
 
     @Test
@@ -53,8 +52,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(404, body.getStatus());
-        assertEquals("User not found", body.getMessage());
+        assertEquals(404, body.status());
+        assertEquals("User not found", body.message());
     }
 
     @Test
@@ -66,8 +65,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(400, body.getStatus());
-        assertEquals("Invalid status", body.getMessage());
+        assertEquals(400, body.status());
+        assertEquals("Invalid status", body.message());
     }
 
     @Test
@@ -79,8 +78,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(409, body.getStatus());
-        assertEquals("Insufficient stock", body.getMessage());
+        assertEquals(409, body.status());
+        assertEquals("Insufficient stock", body.message());
     }
 
     @Test
@@ -96,10 +95,10 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         GlobalExceptionHandler.ValidationErrorResponse body = (GlobalExceptionHandler.ValidationErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(400, body.getStatus());
-        assertEquals("Validation failed", body.getMessage());
-        assertNotNull(body.getErrors());
-        assertEquals("Field error message", body.getErrors().get("field"));
+        assertEquals(400, body.status());
+        assertEquals("Validation failed", body.message());
+        assertNotNull(body.errors());
+        assertEquals("Field error message", body.errors().get("field"));
     }
 
     @Test
@@ -111,8 +110,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(500, body.getStatus());
-        assertTrue(body.getMessage().contains("Generic error"));
+        assertEquals(500, body.status());
+        assertTrue(body.message().contains("Generic error"));
     }
 
     @Test
@@ -128,8 +127,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(400, body.getStatus());
-        assertTrue(body.getMessage().contains("Invalid value"));
+        assertEquals(400, body.status());
+        assertTrue(body.message().contains("Invalid value"));
     }
 
     @Test
@@ -141,7 +140,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         GlobalExceptionHandler.ErrorResponse body = (GlobalExceptionHandler.ErrorResponse) response.getBody();
         assertNotNull(body);
-        assertEquals(401, body.getStatus());
-        assertEquals("Invalid authentication credentials", body.getMessage());
+        assertEquals(401, body.status());
+        assertEquals("Invalid authentication credentials", body.message());
     }
 }

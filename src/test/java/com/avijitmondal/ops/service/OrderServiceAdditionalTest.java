@@ -1,9 +1,6 @@
 package com.avijitmondal.ops.service;
 
-import com.avijitmondal.ops.dto.CreateOrderRequest;
-import com.avijitmondal.ops.dto.OrderItemRequest;
 import com.avijitmondal.ops.dto.OrderResponse;
-import com.avijitmondal.ops.exception.OrderNotFoundException;
 import com.avijitmondal.ops.model.*;
 import com.avijitmondal.ops.repository.OrderRepository;
 import com.avijitmondal.ops.repository.ProductRepository;
@@ -14,15 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

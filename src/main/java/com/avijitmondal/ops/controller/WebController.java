@@ -7,7 +7,6 @@ import com.avijitmondal.ops.model.User;
 import com.avijitmondal.ops.repository.UserRepository;
 import com.avijitmondal.ops.service.OrderService;
 import com.avijitmondal.ops.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -22,14 +21,17 @@ import java.util.UUID;
 @Controller
 public class WebController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public WebController(UserService userService, OrderService orderService, UserRepository userRepository) {
+        this.userService = userService;
+        this.orderService = orderService;
+        this.userRepository = userRepository;
+    }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

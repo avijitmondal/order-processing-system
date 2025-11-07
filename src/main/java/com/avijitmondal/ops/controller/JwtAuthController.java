@@ -6,6 +6,7 @@ import com.avijitmondal.ops.dto.RegisterRequest;
 import com.avijitmondal.ops.model.User;
 import com.avijitmondal.ops.repository.UserRepository;
 import com.avijitmondal.ops.security.JwtUtil;
+import com.avijitmondal.ops.service.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,7 +19,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,17 +39,25 @@ public class JwtAuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthController.class);
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
+    
+    private final TokenService tokenService;
+
+    public JwtAuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, 
+                            UserRepository userRepository, PasswordEncoder passwordEncoder,
+                            TokenService tokenService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tokenService = tokenService;
+    }
 
     @Operation(summary = "User login", description = "Authenticate user and return JWT token")
     @ApiResponses(value = {
@@ -62,7 +70,7 @@ public class JwtAuthController {
         logger.info("Login attempt for email: {}", loginRequest.email());
         
         try {
-            Authentication authentication = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
             );
 
@@ -70,6 +78,9 @@ public class JwtAuthController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
             String token = jwtUtil.generateToken(user.getEmail());
+            
+            // Store token in Redis
+            tokenService.storeToken(user.getEmail(), token);
             
             // Generate unique session ID for tracking user activity
             String sessionId = UUID.randomUUID().toString();
@@ -126,6 +137,9 @@ public class JwtAuthController {
 
             String token = jwtUtil.generateToken(user.getEmail());
             
+            // Store token in Redis
+            tokenService.storeToken(user.getEmail(), token);
+            
             // Generate unique session ID for tracking user activity
             String sessionId = UUID.randomUUID().toString();
             
@@ -150,15 +164,23 @@ public class JwtAuthController {
         }
     }
 
-        @PostMapping("/logout")
+    @PostMapping("/logout")
     @Operation(
         summary = "User logout",
         description = "Logout the authenticated user and clear session"
     )
     @ApiResponse(responseCode = "200", description = "Logged out successfully")
     @ApiResponse(responseCode = "401", description = "User not authenticated")
-    public ResponseEntity<Map<String, String>> logout(HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletResponse response) {
         logger.info("Logout request");
+        
+        // Invalidate token in Redis if provided
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            tokenService.invalidateToken(token);
+        }
         
         // Clear session cookie
         Cookie sessionCookie = new Cookie("session_id", "");
