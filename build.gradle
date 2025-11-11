@@ -30,6 +30,10 @@ dependencies {
     // Redis dependencies
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     
+    // Distributed Tracing (Micrometer Tracing + Zipkin)
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+    
     // JWT dependencies
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'

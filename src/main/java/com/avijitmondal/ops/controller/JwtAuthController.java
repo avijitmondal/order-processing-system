@@ -14,8 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -66,7 +63,7 @@ public class JwtAuthController {
         @ApiResponse(responseCode = "401", description = "Invalid credentials")
     })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         logger.info("Login attempt for email: {}", loginRequest.email());
         
         try {
@@ -81,16 +78,6 @@ public class JwtAuthController {
             
             // Store token in Redis
             tokenService.storeToken(user.getEmail(), token);
-            
-            // Generate unique session ID for tracking user activity
-            String sessionId = UUID.randomUUID().toString();
-            
-            // Set session ID as cookie
-            Cookie sessionCookie = new Cookie("session_id", sessionId);
-            sessionCookie.setHttpOnly(false); // Allow JavaScript access for tracking
-            sessionCookie.setPath("/");
-            sessionCookie.setMaxAge(24 * 60 * 60); // 24 hours
-            response.addCookie(sessionCookie);
 
             logger.info("User logged in successfully - Email: {}, UserId: {}", 
                 user.getEmail(), user.getId());
@@ -117,7 +104,7 @@ public class JwtAuthController {
         @ApiResponse(responseCode = "400", description = "Email already registered")
     })
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest, HttpServletResponse response) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
         logger.info("Registration attempt for email: {}, name: {}", registerRequest.email(), registerRequest.name());
         
         try {
@@ -140,16 +127,6 @@ public class JwtAuthController {
             // Store token in Redis
             tokenService.storeToken(user.getEmail(), token);
             
-            // Generate unique session ID for tracking user activity
-            String sessionId = UUID.randomUUID().toString();
-            
-            // Set session ID as cookie
-            Cookie sessionCookie = new Cookie("session_id", sessionId);
-            sessionCookie.setHttpOnly(false);
-            sessionCookie.setPath("/");
-            sessionCookie.setMaxAge(24 * 60 * 60); // 24 hours
-            response.addCookie(sessionCookie);
-            
             logger.info("User registered successfully - Email: {}, UserId: {}, Name: {}", 
                 user.getEmail(), user.getId(), user.getName());
 
@@ -167,29 +144,20 @@ public class JwtAuthController {
     @PostMapping("/logout")
     @Operation(
         summary = "User logout",
-        description = "Logout the authenticated user and clear session"
+        description = "Logout the authenticated user and invalidate token"
     )
     @ApiResponse(responseCode = "200", description = "Logged out successfully")
     @ApiResponse(responseCode = "401", description = "User not authenticated")
     public ResponseEntity<Map<String, String>> logout(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            HttpServletResponse response) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.info("Logout request");
         
         // Invalidate token in Redis if provided
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             tokenService.invalidateToken(token);
+            logger.info("User token invalidated");
         }
-        
-        // Clear session cookie
-        Cookie sessionCookie = new Cookie("session_id", "");
-        sessionCookie.setHttpOnly(false);
-        sessionCookie.setPath("/");
-        sessionCookie.setMaxAge(0); // Delete cookie
-        response.addCookie(sessionCookie);
-        
-        logger.info("User logged out - Session cleared");
         
         Map<String, String> result = new HashMap<>();
         result.put("message", "Logged out successfully");
