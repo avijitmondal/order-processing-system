@@ -5,6 +5,7 @@ import com.avijitmondal.ops.model.User;
 import com.avijitmondal.ops.repository.ProductRepository;
 import com.avijitmondal.ops.repository.UserRepository;
 import com.avijitmondal.ops.security.JwtUtil;
+import com.avijitmondal.ops.service.TokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ class ProductControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private TokenService tokenService;
 
     private String token;
 
@@ -50,6 +54,9 @@ class ProductControllerTest {
         userRepository.save(user);
 
         token = jwtUtil.generateToken(user.getEmail());
+        
+        // Store token in Redis (required for authentication filter)
+        tokenService.storeToken(user.getEmail(), token);
 
         // Create test products
         Product product1 = new Product();

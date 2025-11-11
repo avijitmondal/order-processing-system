@@ -1,5 +1,6 @@
 package com.avijitmondal.ops.security;
 
+import com.avijitmondal.ops.service.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,9 @@ class JwtAuthenticationFilterTest {
 
     @Mock
     private CustomUserDetailsService userDetailsService;
+    
+    @Mock
+    private TokenService tokenService;
 
     @Mock
     private HttpServletRequest request;
@@ -58,6 +62,7 @@ class JwtAuthenticationFilterTest {
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtUtil.extractUsername(token)).thenReturn(username);
+        when(tokenService.validateToken(token)).thenReturn(true);
         when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
         when(jwtUtil.validateToken(token, userDetails)).thenReturn(true);
 
@@ -91,6 +96,7 @@ class JwtAuthenticationFilterTest {
     void doFilterInternal_withMalformedToken_returnsUnauthorized() throws ServletException, IOException {
         PrintWriter writer = new PrintWriter(new StringWriter());
         when(response.getWriter()).thenReturn(writer);
+        when(response.isCommitted()).thenReturn(false);
         when(request.getHeader("Authorization")).thenReturn("Bearer malformed");
         when(jwtUtil.extractUsername("malformed")).thenThrow(new RuntimeException("Malformed JWT"));
 
@@ -104,12 +110,14 @@ class JwtAuthenticationFilterTest {
     void doFilterInternal_withInvalidToken_returnsUnauthorized() throws ServletException, IOException {
         PrintWriter writer = new PrintWriter(new StringWriter());
         when(response.getWriter()).thenReturn(writer);
+        when(response.isCommitted()).thenReturn(false);
         String token = "invalidToken";
         String username = "test@example.com";
         UserDetails userDetails = new User(username, "password", new ArrayList<>());
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtUtil.extractUsername(token)).thenReturn(username);
+        when(tokenService.validateToken(token)).thenReturn(true);
         when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
         when(jwtUtil.validateToken(token, userDetails)).thenReturn(false);
 
@@ -123,11 +131,13 @@ class JwtAuthenticationFilterTest {
     void doFilterInternal_withNonExistentUser_returnsUnauthorized() throws ServletException, IOException {
         PrintWriter writer = new PrintWriter(new StringWriter());
         when(response.getWriter()).thenReturn(writer);
+        when(response.isCommitted()).thenReturn(false);
         String token = "validToken";
         String username = "nonexistent@example.com";
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(jwtUtil.extractUsername(token)).thenReturn(username);
+        when(tokenService.validateToken(token)).thenReturn(true);
         when(userDetailsService.loadUserByUsername(username))
                 .thenThrow(new UsernameNotFoundException("User not found"));
 

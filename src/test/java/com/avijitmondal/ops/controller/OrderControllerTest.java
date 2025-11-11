@@ -8,6 +8,7 @@ import com.avijitmondal.ops.repository.OrderRepository;
 import com.avijitmondal.ops.repository.ProductRepository;
 import com.avijitmondal.ops.repository.UserRepository;
 import com.avijitmondal.ops.security.JwtUtil;
+import com.avijitmondal.ops.service.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class OrderControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private TokenService tokenService;
 
     private String token;
     private User user;
@@ -64,6 +68,9 @@ class OrderControllerTest {
         user = userRepository.save(user);
 
         token = jwtUtil.generateToken(user.getEmail());
+        
+        // Store token in Redis (required for authentication filter)
+        tokenService.storeToken(user.getEmail(), token);
 
         product = new Product();
         product.setName("Test Product");

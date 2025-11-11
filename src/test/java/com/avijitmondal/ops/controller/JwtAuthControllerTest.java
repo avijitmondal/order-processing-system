@@ -5,6 +5,7 @@ import com.avijitmondal.ops.dto.RegisterRequest;
 import com.avijitmondal.ops.model.User;
 import com.avijitmondal.ops.repository.UserRepository;
 import com.avijitmondal.ops.security.JwtUtil;
+import com.avijitmondal.ops.service.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ class JwtAuthControllerTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private TokenService tokenService;
 
     @Test
     void login_success() throws Exception {
@@ -117,6 +121,9 @@ class JwtAuthControllerTest {
         user = userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getEmail());
+        
+        // Store token in Redis (required for authentication filter)
+        tokenService.storeToken(user.getEmail(), token);
 
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
